@@ -2,8 +2,6 @@
 
 open Chakra
 
-
-
 switch ReactDOM.querySelector("#root") {
   | Some(domElement) =>
     ReactDOM.Client.createRoot(domElement)->ReactDOM.Client.Root.render(
