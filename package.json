@@ -25,6 +25,7 @@
     "autoprefixer": "^10.4.15",
     "postcss": "^8.4.28",
     "react-apexcharts": "^1.4.1",
+    "react-icons": "^5.2.1",
     "tailwindcss": "^3.3.3",
     "vite": "^5.0.6"
   }

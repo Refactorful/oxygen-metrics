@@ -10,8 +10,19 @@ module Button = {
   @react.component @module("@chakra-ui/react")
   external make: (
     ~children: React.element, 
-    ~onClick: ReactEvent.Mouse.t => unit
+    ~onClick: ReactEvent.Mouse.t => unit,
+    ~className: string =?,
   ) => React.element = "Button"
+}
+
+
+module Center = {
+  @react.component @module("@chakra-ui/react")
+  external make: (
+    ~children: React.element, 
+    ~className: string =?,
+    ~style: JsxDOM.style =?
+  ) => React.element = "Center"
 }
 
 module Checkbox = {
@@ -85,14 +96,18 @@ module Stack = {
 module HStack = {
   @react.component @module("@chakra-ui/react")
   external make: (
-    ~children: React.element
+    ~children: React.element,
+    ~className: string =?,
+    ~style: JsxDOM.style =?
   ) => React.element = "HStack"
 }
 
 module VStack = {
   @react.component @module("@chakra-ui/react")
   external make: (
-    ~children: React.element
+    ~children: React.element,
+    ~className: string =?,
+    ~style: JsxDOM.style =?
   ) => React.element = "VStack"
 }
 
@@ -101,7 +116,11 @@ module Box = {
   external make: (
     ~children: React.element,
     ~className: string =?,
-    ~backgroundColor: string =?
+    ~style: JsxDOM.style =?,
+    ~onClick: ReactEvent.Mouse.t => unit =?,
+    ~display: string =?,
+    ~alignItems: string =?,
+    ~justifyContent: string =?
   ) => React.element = "Box"
 }
 
@@ -110,7 +129,9 @@ module Box = {
 module Card = {
   @react.component @module("@chakra-ui/react")
   external make: (
-    ~children: React.element
+    ~children: React.element,
+    ~className: string =?,
+    ~style: JsxDOM.style =?
   ) => React.element = "Card"
 }
 
@@ -140,7 +161,9 @@ module Link = {
   external make: (
     ~children: React.element,
     ~href: string =?,
-    ~onClick: ReactEvent.Mouse.t => unit =?
+    ~onClick: ReactEvent.Mouse.t => unit =?,
+    ~style: JsxDOM.style =?,
+    ~className: string =?
   ) => React.element = "Link"
 }
 
@@ -169,4 +192,41 @@ module Highlight = {
   external make: (
     ~children: string
   ) => React.element = "Highlight"
+}
+
+
+module SimpleGrid = {
+  @react.component @module("@chakra-ui/react")
+  external make: (
+    ~children: React.element,
+    ~columns: 'a =?,
+    ~spacing: string =?,
+  ) => React.element = "SimpleGrid"
+}
+
+
+module Stat = {
+  @react.component @module("@chakra-ui/react")
+  external make: (
+    ~children: React.element,
+    ~me: string =?,
+    ~style: JsxDOM.style =?
+  ) => React.element = "Stat"
+}
+
+
+module StatLabel = {
+  @react.component @module("@chakra-ui/react")
+  external make: (
+    ~children: string,
+    ~style: JsxDOM.style =?
+  ) => React.element = "StatLabel"
+}
+
+module StatNumber = {
+  @react.component @module("@chakra-ui/react")
+  external make: (
+    ~children: string,
+    ~style: JsxDOM.style =?
+  ) => React.element = "StatNumber"
 }
