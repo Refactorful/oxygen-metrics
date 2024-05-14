@@ -15,7 +15,13 @@
   "suffix": ".res.mjs",
   "bs-dependencies": [
     "@rescript/core",
-    "@rescript/react"
+    "@rescript/react",
+    "@dck/rescript-react-query",
+    "@glennsl/rescript-fetch",
+    "@greenlabs/ppx-spice"
+  ],
+  "ppx-flags": [
+    ["@greenlabs/ppx-spice/ppx", "-uncurried"]
   ],
   "bsc-flags": [
     "-open RescriptCore"
