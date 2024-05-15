@@ -1,4 +1,5 @@
-let queryClient = ReactQuery.QueryClient.make()
+open ReactQuery
+open Fetch
 
 @spice
 type githubData = {
@@ -9,48 +10,50 @@ type githubData = {
     forks_count: int,
 }
 
-module Page = {
+let apiUrl = "https://api.github.com/repos/TanStack/query"
 
+let fetchTodos = (_): Js.Promise.t<githubData> => {
+  Fetch.fetch(apiUrl)->Promise.then(Fetch.json)
+}
+
+module Page = {
+// 
   @react.component
   let make = () => {
-    let {status, error, data, isFetching} = ReactQuery.useQuery({
+
+    let queryResult = ReactQuery.useQuery({
         queryKey: [],
-        queryFn: async _ => {
-            let response = await Fetch.get("https://api.github.com/repos/TanStack/query")
-            let data = await response -> Fetch.Response.json
-            data->githubData_decode
-        },
+        queryFn: fetchTodos,
+        refetchInterval: ReactQuery.refetchInterval(#number(3 * 1000)),
     })
+
+    <div>
+        {switch queryResult {
+        | {isLoading: true} => "Loading..."->React.string
+        | {isError: true, error: Value(e)} => e -> Js.Json.stringify->React.string
+        | {data: Some(s), isLoading: false, isError: false} =>
+            <div className="p-4 rounded border inline-flex flex-col m-4">
+                <h1> {s.name->React.string} </h1>
+                <p> {s.description->React.string} </p>
+                <strong> {`👀 ${s.subscribers_count->Int.toString}`->React.string} </strong>
+                <strong> {`✨ ${s.stargazers_count->Int.toString}`->React.string} </strong>
+                <strong> {`🍴 ${s.forks_count->Int.toString}`->React.string} </strong>
+            </div>
+        | _ => `Unexpected error...`->React.string
+      }}
+    </div>
     
-    switch (status, data) {
-    | (Pending, _) => <p> {"Loading..."->React.string} </p>
-    | (Error, _) =>
-      <div>
-        <p> {"An error occured"->React.string} </p>
-        {error->Option.flatMap(e => Js.Exn.message(e))->Option.mapOr(React.null, React.string)}
-      </div>
-    | (Success, Error(_)) =>
-        {Js.log(data)}
-        <div>
-            <p> {"Recieved invalid data structure"->React.string} </p>
-        </div>
-    | (Success, Ok(s)) =>
-        <div className="p-4 rounded border inline-flex flex-col m-4">
-            <h1> {s.name->React.string} </h1>
-            <p> {s.description->React.string} </p>
-            <strong> {`👀 ${s.subscribers_count->Int.toString}`->React.string} </strong>
-            <strong> {`✨ ${s.stargazers_count->Int.toString}`->React.string} </strong>
-            <strong> {`🍴 ${s.forks_count->Int.toString}`->React.string} </strong>
-            <div> {isFetching ? "Updating..."->React.string : React.null} </div>
-        </div>
-    }
   }
 }
 
+
+let client = ReactQuery.Provider.createClient()
+
+
 @react.component
 let make = () => {
-  <ReactQuery.QueryClientProvider client={queryClient}>
+  <ReactQuery.Provider client>
+      <ReactQuery.DevTools initialIsOpen={false}/>
     <Page />
-    <ReactQuery.ReactQueryDevtools initialIsOpen={true} />
-  </ReactQuery.QueryClientProvider>
+  </ReactQuery.Provider>
 }

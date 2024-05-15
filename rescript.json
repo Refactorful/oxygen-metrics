@@ -16,7 +16,7 @@
   "bs-dependencies": [
     "@rescript/core",
     "@rescript/react",
-    "@dck/rescript-react-query",
+    "@rescriptbr/react-query",
     "@glennsl/rescript-fetch",
     "@greenlabs/ppx-spice"
   ],
