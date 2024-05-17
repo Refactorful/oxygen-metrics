@@ -5,8 +5,7 @@ open IconBox
 
 // Components
 open SideBar
-open Settings
-open Dashboard
+// open Settings
 
 // module LazyDashboard = {
 //   let make = React.lazy_(() => Js.import(Dashboard.make))
@@ -19,7 +18,7 @@ module Router = {
     let url = RescriptReactRouter.useUrl()
     switch url.path {
     | list{} => <Dashboard />
-    | list{"data"} => <MyChart />
+    // | list{"data"} => <MyChart />
     | _ => <Text> "404" </Text>
     }
   }

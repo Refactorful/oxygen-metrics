@@ -4,32 +4,16 @@ open IconBox
 // Create global binding for toLocaleString
 @send external toLocaleString: float => string = "toLocaleString"
 
-// module IconBox = {
-
-//   let boxstyle: JsxDOM.style = {
-//     borderRadius: "12px",
-//     backgroundColor: "#2c5282",
-//     color: "white",
-//     height: "45px",
-//     width: "45px",
-//   }
-
-//   @react.component
-//   let make = (~children) => {
-//     <div className="flex items-center justify-center rounded-lg" style={boxstyle}>
-//     {children}
-//     </div>
-//   }
-// }
-
 @react.component
-let make = (~title, ~value, ~icon) => {
-  <div className="p-2 shadow rounded-xl bg-white">
+let make = (~title, ~value, ~icon, ~prefix=?, ~postfix=?) => {
+  <div className="p-2 shadow-sm rounded-xl bg-white">
     <HStack className="flex justify-between">
-      <Box className="m-3">
+      <Box className="m-0 p-3">
         <Stat>
           <StatLabel> {title} </StatLabel>
-          <StatNumber> {toLocaleString(value)} </StatNumber>
+          <StatNumber>
+            { Option.getOr(prefix, "") ++ toLocaleString(value) ++ Option.getOr(postfix, "") }
+          </StatNumber>
         </Stat>
       </Box>
       <Box className="m-3">

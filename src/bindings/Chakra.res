@@ -25,6 +25,15 @@ module Center = {
   ) => React.element = "Center"
 }
 
+module Container = {
+  @react.component @module("@chakra-ui/react")
+  external make: (
+    ~children: React.element, 
+    ~className: string =?,
+    ~style: JsxDOM.style =?
+  ) => React.element = "Container"
+}
+
 module Checkbox = {
   @react.component @module("@chakra-ui/react")
   external make: (
@@ -145,7 +154,8 @@ module CardHeader = {
 module CardBody = {
   @react.component @module("@chakra-ui/react")
   external make: (
-    ~children: React.element
+    ~children: React.element,
+    ~style: JsxDOM.style =?
   ) => React.element = "CardBody"
 }
 
@@ -183,7 +193,8 @@ module Text = {
 module Heading = {
   @react.component @module("@chakra-ui/react")
   external make: (
-    ~children: string
+    ~children: string,
+    ~size: string=?
   ) => React.element = "Heading"
 }
 
