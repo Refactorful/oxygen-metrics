@@ -155,7 +155,7 @@ let getLineOpts = (
       },
     },
     "yaxis": {
-      "tickAmount": 2,
+      "tickAmount": 1,
       "labels": {
         "align": "left",
         "minWidth": 45,
