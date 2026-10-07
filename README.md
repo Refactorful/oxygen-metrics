@@ -1,40 +1,65 @@
-# ReScript / Vite Starter Template
+# Oxygen Metrics Dashboard (ReScript)
 
-- [Installation](../../README.md)
+ReScript re-write of the [oxygen-metrics-dashboard](../oxygen-metrics-dashboard) React app
+that is bundled with [Oxygen.jl](../Oxygen.jl) and served at `GET /docs/metrics`.
 
-This is a Vite-based template with following setup:
+## Stack
 
-- [ReScript](https://rescript-lang.org) 11.0 with @rescript/react, [Core](https://github.com/rescript-association/rescript-core) and JSX v4
-- ES6 modules (ReScript code compiled to `.res.mjs` files)
-- Vite 4 with React Plugin (Fast Refresh)
-- Tailwind 3
+- [ReScript](https://rescript-lang.org) 11 with `@rescript/react` (JSX v4)
+- [Chakra UI](https://chakra-ui.com) 2 for layout/theme + Tailwind for utility classes
+- [ApexCharts](https://apexcharts.com) (`react-apexcharts`) for all graphs
+- [@preact/signals-react](https://preactjs.com/guide/v10/signals/) as the global store
+- [`@greenlabs/ppx-spice`](https://github.com/green-labs/ppx_spice) for JSON decoding
 
 ## Development
 
-Run ReScript in dev mode:
-
 ```sh
-npm run res:dev
+bun install
+bun run res:dev   # ReScript compiler in watch mode
+bun run dev       # Vite dev server
 ```
 
-In another tab, run the Vite dev server:
+The dev server proxies `/df9a0d86-3283-4920-82dc-4555fc0d1d8b/*` to a local Oxygen
+server running on `http://127.0.0.1:8080`, so start your Oxygen app with metrics
+enabled first:
 
-```sh
-npm run dev
+```julia
+using Oxygen
+@get "/" do
+    "hello"
+end
+serve(metrics = true)   # http://127.0.0.1:8080/docs/metrics
 ```
 
-## Tips
+## Production build
 
-### Fast Refresh & ReScript
+```sh
+bun run build   # emits ./dist
+```
 
-Make sure to create interface files (`.resi`) for each `*.res` file.
+Copy the contents of `dist/` into `Oxygen.jl/data/dashboard`. When serving the
+dashboard, Oxygen rewrites every occurrence of
+`/df9a0d86-3283-4920-82dc-4555fc0d1d8b/` to `<docs_path>/metrics/`, which is why:
 
-Fast Refresh requires you to **only export React components**, and it's easy to unintenionally export other values that will disable Fast Refresh (you will see a message in the browser console whenever this happens).
+- `vite.config.js` sets the production `base` to that path (asset URLs), and
+- `src/Metrics.res` builds its API URL from the same path (`.../data`).
 
-### Why are the generated `.res.mjs` files tracked in git?
+This is the exact mechanism the original dashboard used, so a custom `docs_path`
+keeps working without any rebuild.
 
-In ReScript, it's a good habit to keep track of the actual JS output the compiler emits. It allows quick sanity checking if we made any changes that actually have an impact on the resulting JS code (especially when doing major compiler upgrades, it's a good way to verify if production code will behave the same way as before the upgrade).
+## How realtime updates work
 
-This will also make it easier for your Non-ReScript coworkers to read and understand the changes in Github PRs, and call you out when you are writing inefficient code.
+`Metrics.usePolling()` (called once in `App.res`) mirrors the original
+`layouts/Admin.js` loop:
 
-If you want to opt-out, feel free to remove all compiled `.res.mjs` files within the `src` directory and add `src/**/*.res.mjs` in your `.gitignore`.
+1. Read the newest timestamp held in the `requests_per_second` signal and format
+   it as a UTC string (`YYYY-MM-DDTHH:mm:ss.0`).
+2. Fetch `<base>/<window>/<latest>` — the first request uses `null` to pull the
+   initial window.
+3. Convert incoming UTC timestamps to local epoch milliseconds, merge them into
+   the accumulated series (last value wins for duplicate bins) and overwrite the
+   server/endpoints/errors aggregates.
+4. Restart the loop whenever the window, poll toggle or interval change.
+
+`BrushChart` freezes the top chart while a brush selection is active and resumes
+on `reset`, just like the original implementation.

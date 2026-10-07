@@ -1,3 +1,13 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+  ApexCharts shifts the y-axis label group by the width of the widest label,
+  which makes narrow labels (e.g. "6") float to the right of the reserved axis
+  area. The y-axis reserves a fixed 45px (see `minWidth` in the chart options),
+  so shift the group by that same amount to left-align every chart's labels.
+*/
+.apexcharts-yaxis-texts-g {
+  transform: translate(-45px, 0) !important;
+}

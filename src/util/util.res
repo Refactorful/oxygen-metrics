@@ -1,112 +1,130 @@
-
-
-// Helper function used to round a float to a given number of decimal places
+/**
+  Rounds a float to the given number of decimal places
+ */
 let roundFloat = (value, places) => {
   let multiplier = Js.Math.pow_float(~base=10., ~exp=float_of_int(places))
   Js.Math.round(value *. multiplier) /. multiplier
 }
 
 /**
-  This function flattens the key-value pairs inside a Js Dictionary
-  into two separate arrays, one for keys and one for values
+  Flattens the key-value pairs inside a Js.Dict into an object containing
+  a `keys` array and a `values` array
  */
 let flattenEntries = (data, strategy) => {
-    let keys = ref([])
-    let values = ref([])
-    Js.Dict.entries(data) -> Belt.Array.forEach(((k, v)) => {
-        Belt.Array.push(keys.contents, k)
-        Belt.Array.push(values.contents, strategy(v))
-    })
-    { "keys": keys.contents, "values": values.contents }
+  let keys = ref([])
+  let values = ref([])
+  Js.Dict.entries(data)->Belt.Array.forEach(((k, v)) => {
+    Belt.Array.push(keys.contents, k)
+    Belt.Array.push(values.contents, strategy(v))
+  })
+  {"keys": keys.contents, "values": values.contents}
 }
 
-
-/*
- This fucntion should fill in missing data in the data array based on the unit provided in ms
+/**
+  Parses a UTC timestamp sent by the Oxygen server (e.g. "2024-05-15T18:03:52.0")
+  into an epoch timestamp in milliseconds
  */
-let fillMissingData = (
-  ~data: list<(string, float)>,
-  ~unit=1000,
-  ~fillToCurrent=true,
-  ~sort=true,
-) => {
+let parseUtc = (timestamp: string) => {
+  let normalized = Js.String.endsWith(timestamp, "Z") ? timestamp : timestamp ++ "Z"
+  Js.Date.fromString(normalized)->Js.Date.getTime
+}
 
-  let unit = float_of_int(unit)
-  let filledRecords = ref([])
+/**
+  Formats an epoch timestamp in milliseconds as a UTC string matching the format
+  expected by the Oxygen `{latest}` route param: "YYYY-MM-DDTHH:mm:ss.0"
+ */
+let formatUtc = (epochMs: float) => {
+  let date = Js.Date.fromFloat(epochMs)
+  let pad = value => value < 10 ? "0" ++ Int.toString(value) : Int.toString(value)
+  let year = Js.Date.getUTCFullYear(date)->Int.fromFloat
+  let month = Js.Date.getUTCMonth(date)->Int.fromFloat + 1
+  let day = Js.Date.getUTCDate(date)->Int.fromFloat
+  let hours = Js.Date.getUTCHours(date)->Int.fromFloat
+  let minutes = Js.Date.getUTCMinutes(date)->Int.fromFloat
+  let seconds = Js.Date.getUTCSeconds(date)->Int.fromFloat
+  Int.toString(year) ++
+    "-" ++
+    pad(month) ++
+    "-" ++
+    pad(day) ++
+    "T" ++
+    pad(hours) ++
+    ":" ++
+    pad(minutes) ++
+    ":" ++
+    pad(seconds) ++
+    ".0"
+}
+
+/**
+  Shallow-merges two JS objects into a new object (`Object.assign({}, a, b)`).
+  Useful for immutably updating ApexCharts option objects.
+ */
+let merge: ('a, 'b) => 'a = %raw("(a, b) => Object.assign({}, a, b)")
+
+/**
+  Converts a `(timestamp, value)` series coming from the server into `(epochMs, value)` tuples
+ */
+let toPoints = (data: array<(string, 'value)>, ~convert: 'value => float) =>
+  data->Array.map(((timestamp, value)) => (timestamp->parseUtc, value->convert))
+
+/**
+  Merges two sorted timeseries together, keeping the last value seen for
+  duplicate timestamps (the server can send an update for the latest bin)
+ */
+let mergeTimeseries = (previous: array<(float, float)>, incoming: array<(float, float)>) => {
+  let seen = Js.Dict.empty()
+  let result = []
+
+  let add = ((timestamp, value)) => {
+    let key = Js.Float.toString(timestamp)
+    switch Js.Dict.get(seen, key) {
+    | Some(index) => result->Array.setUnsafe(index, (timestamp, value))
+    | None => {
+        Js.Dict.set(seen, key, result->Array.length)
+        result->Array.push((timestamp, value))
+      }
+    }
+  }
+
+  previous->Array.forEach(add)
+  incoming->Array.forEach(add)
+  result
+}
+
+/**
+  Fills in missing data in a sorted `(epochMs, value)` series based on the unit
+  provided in milliseconds. Optionally fills the series up to the current time.
+ */
+let fillMissingData = (~data: array<(float, float)>, ~unit=1000., ~fillToCurrent=true) => {
+  let filledRecords = []
   let lastRecordTime = ref(0.0)
 
-  // sort records by timestamp if enabled
-  let sortedData = !sort
-    ? data
-    : Belt.List.sort(data, ((timeA, _), (timeB, _)) => {
-        let timestampA = timeA->Js.Date.fromString->Js.Date.getTime->Int.fromFloat
-        let timestampB = timeB->Js.Date.fromString->Js.Date.getTime->Int.fromFloat
-        timestampA - timestampB
-      })
+  data->Array.forEachWithIndex(((timestamp, value), index) => {
 
-  sortedData->Belt.List.forEachWithIndex((index, (timestamp, value)) => {
+    // Keep track of the last timestamp we've seen and append the record
+    lastRecordTime := timestamp
+    filledRecords->Array.push((timestamp, value))
 
-    // Convert the timestamp to an epoch
-    lastRecordTime := timestamp->Js.Date.fromString->Js.Date.getTime
-
-    // append the record to the filled records
-    Belt.Array.push(filledRecords.contents, (lastRecordTime.contents, value))
-
-    // safely access the next record in the list
-    switch Belt.List.get(sortedData, index + 1) {
-    | Some(nextRecord) => {
-        // Get the time of the next record
-        let nextTime = nextRecord->fst->Js.Date.fromString->Js.Date.getTime /. unit
-        // Fill in the missing data up until the next record
-        while lastRecordTime.contents +. unit < nextTime {
-          lastRecordTime := lastRecordTime.contents +. unit
-          Belt.Array.push(filledRecords.contents, (lastRecordTime.contents, 0.0))
-        }
+    switch data->Array.get(index + 1) {
+    | Some((nextTime, _)) =>
+      while lastRecordTime.contents +. unit < nextTime {
+        lastRecordTime := lastRecordTime.contents +. unit
+        filledRecords->Array.push((lastRecordTime.contents, 0.0))
       }
     | None => ()
     }
   })
 
-  // Fill in the missing data up until the current time 
-  // (ensure lastrecordtime is not 0.0 and unit is greater than 0.0 to prevent infinite loops)
+  // Fill in the missing data up until the current time
+  // (guard against infinite loops when unit is not positive)
   if fillToCurrent && lastRecordTime.contents > 0.0 && unit > 0.0 {
-    // Make sure we format the current time
     let now = Js.Date.now()
     while lastRecordTime.contents +. unit < now {
       lastRecordTime := lastRecordTime.contents +. unit
-      Belt.Array.push(filledRecords.contents, (lastRecordTime.contents, 0.0))
+      filledRecords->Array.push((lastRecordTime.contents, 0.0))
     }
   }
 
-  filledRecords.contents
+  filledRecords
 }
-
-// Helper fuction to simplify the call signature
-let fill_data = (data, ~unit=1000) => {
-  fillMissingData(~data=data->Belt.List.fromArray, ~unit=unit, ~fillToCurrent=true, ~sort=false)
-}
-
-let fill_data_int = (data, ~unit=1000) => {
-  let dataFloat = data->Belt.Array.map(((x, y)) => (x, float_of_int(y)))
-  fill_data(dataFloat, ~unit=unit)
-}
-
-/**
- Converts a JavaScript dictionary into an array of key-value pairs.
- 
- This function takes a JavaScript dictionary as input and converts it into an array of key-value pairs.
- It uses the Belt library's Array functions for this process.
- */
-let array_of_dict = dict => Js.Dict.entries(dict) 
-
-
-/**
- Returns the druation of a function in milliseconds
- */
-let time_function = (f: unit => unit) => {
-  let start = Js.Date.now() 
-  f()
-  let end = Js.Date.now() 
-  end -. start
-}
-
