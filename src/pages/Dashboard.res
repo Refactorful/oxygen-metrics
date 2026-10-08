@@ -183,7 +183,7 @@ let make = () => {
             size="md"
             w="140px"
             onChange={event => {
-              let value = ReactEvent.Form.target(event)["value"]->Js.String.make
+              let value = ReactEvent.Form.target(event)["value"]->String.make
               AppState.windowValue->Signals.set(value)
             }}>
             {windowOptions->Array.map(windowOption)->React.array}

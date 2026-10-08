@@ -21,8 +21,8 @@ type endpointMetrics = {
 @spice
 type metricsResponse = {
   server: endpointMetrics,
-  errors: Js.Dict.t<int>,
-  endpoints: Js.Dict.t<endpointMetrics>,
+  errors: dict<int>,
+  endpoints: dict<endpointMetrics>,
   requests_per_minute: array<(string, int)>,
   requests_per_second: array<(string, int)>,
   avg_latency_per_minute: array<(string, float)>,
@@ -49,8 +49,8 @@ let emptyServer: endpointMetrics = {
 // ---------------------------------------------------------------------------
 
 let server = signal(emptyServer)
-let endpoints = signal(Js.Dict.empty())
-let errors = signal(Js.Dict.empty())
+let endpoints = signal(Dict.make())
+let errors = signal(Dict.make())
 let requestsPerSecond = signal(emptyPoints)
 let avgLatencyPerSecond = signal(emptyPoints)
 let requestsPerMinute = signal(emptyPoints)
@@ -111,7 +111,7 @@ let append = (metrics: metricsResponse) => {
 let lastTimestamp = () =>
   switch requestsPerSecond->val {
   | [] => "null"
-  | values => values->Array.getUnsafe(values->Array.length - 1)->fst->formatUtc
+  | values => values->Array.getUnsafe(values->Array.length - 1)->Pair.first->formatUtc
   }
 
 // ---------------------------------------------------------------------------
@@ -163,7 +163,7 @@ let usePolling = () => {
           })
           ->Promise.catch(fetchError => {
             loading->set(false)
-            error->set(Some(fetchError->Js.String.make))
+            error->set(Some(fetchError->String.make))
             inFlight.current = false
             Promise.resolve()
           })

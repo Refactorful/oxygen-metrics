@@ -5,11 +5,11 @@ that is bundled with [Oxygen.jl](../Oxygen.jl) and served at `GET /docs/metrics`
 
 ## Stack
 
-- [ReScript](https://rescript-lang.org) 11 with `@rescript/react` (JSX v4)
+- [ReScript](https://rescript-lang.org) 12 with `@rescript/react` (JSX v4)
 - [Chakra UI](https://chakra-ui.com) 2 for layout/theme + Tailwind for utility classes
 - [ApexCharts](https://apexcharts.com) (`react-apexcharts`) for all graphs
 - [@preact/signals-react](https://preactjs.com/guide/v10/signals/) as the global store
-- [`@greenlabs/ppx-spice`](https://github.com/green-labs/ppx_spice) for JSON decoding
+- [`@mununki/ppx-spice`](https://github.com/mununki/ppx_spice) for JSON decoding
 
 ## Development
 

@@ -4,7 +4,9 @@ open ReactIcons
 /**
   The navigation bar from the original dashboard: a rounded rail with a
   "Pages / <brand>" breadcrumb, the page title and the settings trigger. It
-  sits in the normal page flow (static) so it scrolls away with the content
+  sits in the normal page flow (static) so it scrolls away with the content.
+  The 18px top offset mirrors the original navbar's `top: 18px`; the negative
+  bottom margin keeps its 75px flow footprint so the content below stays put
  */
 @react.component
 let make = (~brandText, ~onOpen) => {
@@ -14,6 +16,8 @@ let make = (~brandText, ~onOpen) => {
 
   let navbarStyle: JsxDOM.style = {
     minHeight: "75px",
+    marginTop: "18px",
+    marginBottom: "-18px",
     borderRadius: "16px",
     border: "1px solid transparent",
     padding: "8px 30px",

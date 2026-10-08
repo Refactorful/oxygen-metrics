@@ -52,7 +52,7 @@ let make = (~isOpen, ~onClose) => {
               size="md"
               w="140px"
               onChange={event => {
-                let value = ReactEvent.Form.target(event)["value"]->Js.String.make
+                let value = ReactEvent.Form.target(event)["value"]->String.make
                 switch Int.fromString(value) {
                 | Some(interval) => AppState.interval->Signals.set(interval)
                 | None => ()

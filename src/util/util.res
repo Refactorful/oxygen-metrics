@@ -2,8 +2,8 @@
   Rounds a float to the given number of decimal places
  */
 let roundFloat = (value, places) => {
-  let multiplier = Js.Math.pow_float(~base=10., ~exp=float_of_int(places))
-  Js.Math.round(value *. multiplier) /. multiplier
+  let multiplier = Math.pow(10., ~exp=Int.toFloat(places))
+  Math.round(value *. multiplier) /. multiplier
 }
 
 /**
@@ -13,7 +13,7 @@ let roundFloat = (value, places) => {
 let flattenEntries = (data, strategy) => {
   let keys = ref([])
   let values = ref([])
-  Js.Dict.entries(data)->Belt.Array.forEach(((k, v)) => {
+  Dict.toArray(data)->Belt.Array.forEach(((k, v)) => {
     Belt.Array.push(keys.contents, k)
     Belt.Array.push(values.contents, strategy(v))
   })
@@ -26,7 +26,7 @@ let flattenEntries = (data, strategy) => {
  */
 let parseUtc = (timestamp: string) => {
   let normalized = Js.String.endsWith(timestamp, "Z") ? timestamp : timestamp ++ "Z"
-  Js.Date.fromString(normalized)->Js.Date.getTime
+  Date.fromString(normalized)->Date.getTime
 }
 
 /**
@@ -34,14 +34,14 @@ let parseUtc = (timestamp: string) => {
   expected by the Oxygen `{latest}` route param: "YYYY-MM-DDTHH:mm:ss.0"
  */
 let formatUtc = (epochMs: float) => {
-  let date = Js.Date.fromFloat(epochMs)
+  let date = Date.fromTime(epochMs)
   let pad = value => value < 10 ? "0" ++ Int.toString(value) : Int.toString(value)
-  let year = Js.Date.getUTCFullYear(date)->Int.fromFloat
-  let month = Js.Date.getUTCMonth(date)->Int.fromFloat + 1
-  let day = Js.Date.getUTCDate(date)->Int.fromFloat
-  let hours = Js.Date.getUTCHours(date)->Int.fromFloat
-  let minutes = Js.Date.getUTCMinutes(date)->Int.fromFloat
-  let seconds = Js.Date.getUTCSeconds(date)->Int.fromFloat
+  let year = Date.getUTCFullYear(date)
+  let month = Date.getUTCMonth(date) + 1
+  let day = Date.getUTCDate(date)
+  let hours = Date.getUTCHours(date)
+  let minutes = Date.getUTCMinutes(date)
+  let seconds = Date.getUTCSeconds(date)
   Int.toString(year) ++
     "-" ++
     pad(month) ++
@@ -73,15 +73,15 @@ let toPoints = (data: array<(string, 'value)>, ~convert: 'value => float) =>
   duplicate timestamps (the server can send an update for the latest bin)
  */
 let mergeTimeseries = (previous: array<(float, float)>, incoming: array<(float, float)>) => {
-  let seen = Js.Dict.empty()
+  let seen = Dict.make()
   let result = []
 
   let add = ((timestamp, value)) => {
-    let key = Js.Float.toString(timestamp)
-    switch Js.Dict.get(seen, key) {
+    let key = Float.toString(timestamp)
+    switch Dict.get(seen, key) {
     | Some(index) => result->Array.setUnsafe(index, (timestamp, value))
     | None => {
-        Js.Dict.set(seen, key, result->Array.length)
+        Dict.set(seen, key, result->Array.length)
         result->Array.push((timestamp, value))
       }
     }
@@ -119,7 +119,7 @@ let fillMissingData = (~data: array<(float, float)>, ~unit=1000., ~fillToCurrent
   // Fill in the missing data up until the current time
   // (guard against infinite loops when unit is not positive)
   if fillToCurrent && lastRecordTime.contents > 0.0 && unit > 0.0 {
-    let now = Js.Date.now()
+    let now = Date.now()
     while lastRecordTime.contents +. unit < now {
       lastRecordTime := lastRecordTime.contents +. unit
       filledRecords->Array.push((lastRecordTime.contents, 0.0))

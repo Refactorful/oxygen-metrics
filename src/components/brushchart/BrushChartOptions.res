@@ -9,7 +9,7 @@ let jsUndefined: 'a = %raw("undefined")
   it is a defined number, so `undefined` restores the automatic range
  */
 let countLeadingZeros = (number: float) => {
-  let str = Js.Float.toString(number)
+  let str = Float.toString(number)
 
   if !Js.String.includes(".", str) {
     3
@@ -17,8 +17,8 @@ let countLeadingZeros = (number: float) => {
     let decimalPart = Js.String.split(".", str)->Array.get(1)->Option.getOr("")
     let count = ref(2)
     let i = ref(0)
-    let len = Js.String.length(decimalPart)
-    while i.contents < len && Js.String.get(decimalPart, i.contents) == "0" {
+    let len = String.length(decimalPart)
+    while i.contents < len && String.getUnsafe(decimalPart, i.contents) == "0" {
       count := count.contents + 1
       i := i.contents + 1
     }
@@ -30,7 +30,7 @@ let yaxisFormatter = (value: float, unit: option<string>) => {
   let formatted = if value != Math.floor(value) {
     value->Float.toFixed(~digits=countLeadingZeros(value))
   } else {
-    Js.Float.toString(value)
+    Float.toString(value)
   }
 
   switch unit {
@@ -44,9 +44,9 @@ let yaxisFormatter = (value: float, unit: option<string>) => {
   the moment.js `hh:mm:ss A` format used by the original dashboard
  */
 let timeLabel = (epochMs: float) => {
-  let date = Js.Date.fromFloat(epochMs)
+  let date = Date.fromTime(epochMs)
   let pad = value => value < 10 ? "0" ++ Int.toString(value) : Int.toString(value)
-  let hours = Js.Date.getHours(date)->Int.fromFloat
+  let hours = Date.getHours(date)
   let suffix = hours < 12 ? "AM" : "PM"
   let hour12 = if hours == 0 || hours == 12 {
     12
@@ -55,9 +55,9 @@ let timeLabel = (epochMs: float) => {
   }
   pad(hour12) ++
   ":" ++
-  pad(Js.Date.getMinutes(date)->Int.fromFloat) ++
+  pad(Date.getMinutes(date)) ++
   ":" ++
-  pad(Js.Date.getSeconds(date)->Int.fromFloat) ++
+  pad(Date.getSeconds(date)) ++
   " " ++
   suffix
 }
@@ -141,7 +141,7 @@ let getLineOpts = (
         "stroke": {"width": 1, "dashArray": 3, "color": strokeColor, "opacity": 1},
       },
       "events": {
-        "brushScrolled": (. _chartContext, event: brushEvent) => onBrushScrolled(event),
+        "brushScrolled": (_chartContext, event: brushEvent) => onBrushScrolled(event),
       },
     },
     "stroke": {"width": 1},
