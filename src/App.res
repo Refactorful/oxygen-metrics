@@ -23,8 +23,8 @@ let routes = [
 ]
 
 @react.component
-let make = () => {
-  Metrics.usePolling()
+let make = (~endpoint: string=Metrics.defaultBasePath) => {
+  Metrics.usePolling(~baseUrl=endpoint)
 
   let {isOpen, onOpen, onClose} = Chakra.useDisclosure()
   let backgroundColor = Chakra.useColorModeValue("gray.50", "gray.800")

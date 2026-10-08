@@ -65,14 +65,14 @@ let error = signal(None)
 // ---------------------------------------------------------------------------
 
 /**
-  When the dashboard is bundled with Oxygen.jl, every occurrence of this path
-  is rewritten by the server to `<docs_path>/metrics/`, so requests end up at
-  `<origin>/docs/metrics/data/...`. During `vite dev` the same path is proxied
-  to the local Oxygen server (see vite.config.js).
+  Default base URL of the metrics API. When the dashboard is bundled with
+  Oxygen.jl, every occurrence of this path is rewritten by the server to
+  `<docs_path>/metrics/`, so requests end up at `<origin>/docs/metrics/data/...`.
+  During `vite dev` the same path is proxied to the local Oxygen server (see
+  vite.config.js). Embedded hosts override it through `window.OxygenMetrics`
+  (see Main.res).
  */
-let metricsBasePath = "/df9a0d86-3283-4920-82dc-4555fc0d1d8b/data"
-
-let baseUrl = () => %raw("window.location.origin") ++ metricsBasePath
+let defaultBasePath = "/df9a0d86-3283-4920-82dc-4555fc0d1d8b/data"
 
 /**
   Appends a fresh response to the accumulator. Server statistics overwrite the
@@ -124,9 +124,9 @@ let lastTimestamp = () =>
 /**
   Mirrors the polling loop from the original dashboard: it fetches only the
   timeseries newer than the last timestamp we hold (converted to UTC) and
-  restarts whenever the window, poll toggle or interval change
+  restarts whenever the base URL, window, poll toggle or interval change
  */
-let usePolling = () => {
+let usePolling = (~baseUrl: string) => {
   Signals.useSignals()
 
   let windowValue = AppState.windowValue->val
@@ -146,7 +146,7 @@ let usePolling = () => {
           ()
         } else {
           inFlight.current = true
-          Fetch.fetch(baseUrl() ++ "/" ++ windowValue ++ "/" ++ lastTimestamp())
+          Fetch.fetch(baseUrl ++ "/" ++ windowValue ++ "/" ++ lastTimestamp())
           ->Promise.then(Fetch.json)
           ->Promise.then(json => {
             Signals.batch(() => {
@@ -174,5 +174,5 @@ let usePolling = () => {
       let intervalId = setInterval(load, interval * 1000)
       Some(() => clearInterval(intervalId))
     }
-  }, (windowValue, poll, interval))
+  }, (baseUrl, windowValue, poll, interval))
 }

@@ -11,6 +11,20 @@
 <body>
   <div id="root"></div>
   <script type="module" src="/src/Main.res.mjs"></script>
+  <script>
+    // Standalone page: mount the dashboard into #root through the same global
+    // embedded deployments use (see src/Main.res).
+    (function () {
+      function start() {
+        window.OxygenMetrics({ domId: "root" });
+      }
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", start);
+      } else {
+        start();
+      }
+    })();
+  </script>
 </body>
 
 </html>
