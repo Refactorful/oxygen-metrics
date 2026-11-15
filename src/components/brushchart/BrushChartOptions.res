@@ -1,46 +1,24 @@
-%raw(`
-    function countLeadingZeros(number) {
-    // Check if number is null or undefined
-    if (number === null || number === undefined) {
-      throw new Error("Input is null or undefined");
-    }
-  
-    // Convert the number to a string
-    let str = number.toString();
-  
-    // Early return if the number is an integer
-    if (!str.includes('.')) {
-      return 3;
-    }
-  
-    // Split the string at the decimal point and take the decimal part
-    let decimalPart = str.split(".")[1];
-  
-    // Start with a minimum precision of 3
-    let count = 2;
-  
-    // Use while loop for counting leading zeros
-    let i = 0;
-    while (i < decimalPart.length && decimalPart[i] === '0') {
-      count++;
-      i++;
-    }
-  
-    return count;
-  }
-`)
+/**
+  Represents `undefined` so we can mirror the exact option objects the original
+  dashboard passes when clearing an ApexCharts axis range
+ */
+let jsUndefined: 'a = %raw("undefined")
 
+/**
+  The value of `w.config.xaxis.range` is only treated as "set" by ApexCharts when
+  it is a defined number, so `undefined` restores the automatic range
+ */
 let countLeadingZeros = (number: float) => {
-  let str = Js.Float.toString(number)
+  let str = Float.toString(number)
 
   if !Js.String.includes(".", str) {
-    0
+    3
   } else {
-    let decimalPart = Js.String.split(".", str)->Belt.Array.get(1)->Belt.Option.getWithDefault("")
-    let count = ref(0)
+    let decimalPart = Js.String.split(".", str)->Array.get(1)->Option.getOr("")
+    let count = ref(2)
     let i = ref(0)
-    let len = Js.String.length(decimalPart)
-    while i.contents < len && Js.String.get(decimalPart, i.contents) == "0" {
+    let len = String.length(decimalPart)
+    while i.contents < len && String.getUnsafe(decimalPart, i.contents) == "0" {
       count := count.contents + 1
       i := i.contents + 1
     }
@@ -48,21 +26,57 @@ let countLeadingZeros = (number: float) => {
   }
 }
 
-// countLeadingZeros(0.000332) -> Js.log
+let yaxisFormatter = (value: float, unit: option<string>) => {
+  let formatted = if value != Math.floor(value) {
+    value->Float.toFixed(~digits=countLeadingZeros(value))
+  } else {
+    Float.toString(value)
+  }
 
-let yaxisFormatter = %raw(`
-    function(value, unit=null) {
-        let formatted = value;
-        // Check if the value has more than three decimal places
-        if (value % 1 !== 0) {
-            formatted = parseFloat(value).toFixed(countLeadingZeros(value));
-        }
-        // If it doesn't have more than three decimal places, leave it as is
-        return unit ? formatted + unit : formatted;
-    }
-`)
+  switch unit {
+  | Some(unit) => formatted ++ unit
+  | None => formatted
+  }
+}
 
-let getChartOpts = (label, range, unit) =>
+/**
+  Formats an epoch timestamp as a local time label ("06:03:52 PM"), matching
+  the moment.js `hh:mm:ss A` format used by the original dashboard
+ */
+let timeLabel = (epochMs: float) => {
+  let date = Date.fromTime(epochMs)
+  let pad = value => value < 10 ? "0" ++ Int.toString(value) : Int.toString(value)
+  let hours = Date.getHours(date)
+  let suffix = hours < 12 ? "AM" : "PM"
+  let hour12 = if hours == 0 || hours == 12 {
+    12
+  } else {
+    hours - (hours / 12) * 12
+  }
+  pad(hour12) ++
+  ":" ++
+  pad(Date.getMinutes(date)) ++
+  ":" ++
+  pad(Date.getSeconds(date)) ++
+  " " ++
+  suffix
+}
+
+type brushRange = {
+  range: float,
+  min: float,
+  max: float,
+}
+
+type brushXAxis = {min: float, max: float}
+type brushEvent = {xaxis: brushXAxis}
+
+let labelStyle = {"colors": "#c8cfca", "fontSize": "12px"}
+
+/**
+  Options for the main (top) chart which is the target of the brush
+ */
+let getChartOpts = (label: string, unit: option<string>) => {
   {
     "chart": {
       "id": label,
@@ -79,98 +93,75 @@ let getChartOpts = (label, range, unit) =>
         },
       },
     },
-    "tooltip": {
-      "theme": "dark",
-    },
-    "stroke": {
-      "width": 2,
-    },
-    "dataLabels": {
-      "enabled": false,
-    },
-    "markers": {
-      "size": 0,
-    },
+    "tooltip": {"theme": "dark"},
+    "stroke": {"width": 2},
+    "dataLabels": {"enabled": false},
+    "markers": {"size": 0},
     "colors": ["#0BC5EA", "#2D3748"],
     "xaxis": {
       "type": "datetime",
-      "range": range,
+      "range": 60_000,
       "tickAmount": 3,
       "labels": {
-        "formatter": value => {
-          Js.Date.fromFloat(value)->Js.Date.toLocaleDateString
-        },
-        "style": {
-          "colors": "#c8cfca",
-          "fontSize": "12px",
-        },
+        "formatter": (value: float) => timeLabel(value),
+        "style": labelStyle,
       },
     },
     "yaxis": {
       "labels": {
-        "style": {
-          "colors": "#c8cfca",
-          "fontSize": "12px",
-        },
-        "formatter": value => yaxisFormatter(value, unit),
+        "align": "left",
+        "minWidth": 45,
+        "style": labelStyle,
+        "formatter": (value: float) => yaxisFormatter(value, unit),
       },
     },
   }
+}
 
-let getLineOpts = (label, target, unit, fillColor, strokeColor) =>
+/**
+  Options for the bottom (brush) chart, which controls the range of `target`
+ */
+let getLineOpts = (
+  label: string,
+  target: string,
+  ~unit: option<string>,
+  ~fillColor: string,
+  ~strokeColor: string,
+  ~onBrushScrolled: brushEvent => unit,
+) => {
   {
     "chart": {
       "id": label,
       "height": 130,
       "type": "area",
-      "brush": {
-        "target": target,
-        "enabled": true,
-      },
+      "brush": {"target": target, "enabled": true},
       "selection": {
         "enabled": true,
-        "fill": {
-          "color": fillColor,
-          "opacity": 0.1,
-        },
-        "stroke": {
-          "width": 1,
-          "dashArray": 3,
-          "color": strokeColor,
-          "opacity": 1,
-        },
+        "fill": {"color": fillColor, "opacity": 0.1},
+        "stroke": {"width": 1, "dashArray": 3, "color": strokeColor, "opacity": 1},
       },
-      //   "events": {
-      //     brushScrolled: function (chartContext, { xaxis, yaxis }) {
-      //       onBrushUpdate(chartContext, xaxis)
-      //     }
-      //   },
+      "events": {
+        "brushScrolled": (_chartContext, event: brushEvent) => onBrushScrolled(event),
+      },
     },
-    "stroke": {
-      "width": 1,
-    },
+    "stroke": {"width": 1},
     "colors": ["#0BC5EA", "#2D3748"],
     "xaxis": {
       "type": "datetime",
       "tickAmount": 3,
       "labels": {
-        "formatter": value => {
-          Js.Date.fromFloat(value)->Js.Date.toLocaleDateString
-        },
-        "style": {
-          "colors": "#c8cfca",
-          "fontSize": "12px",
-        },
+        "formatter": (value: float) => timeLabel(value),
+        "style": labelStyle,
       },
     },
     "yaxis": {
-      "tickAmount": 2,
+      "tickAmount": 1,
       "labels": {
-        "style": {
-          "colors": "#c8cfca",
-          "fontSize": "12px",
-        },
-        "formatter": value => yaxisFormatter(value, unit),
+        "align": "left",
+        "minWidth": 45,
+        "style": labelStyle,
+        "formatter": (value: float) => yaxisFormatter(value, unit),
       },
     },
   }
+}

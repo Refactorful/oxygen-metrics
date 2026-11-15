@@ -13,18 +13,12 @@
     }
   ],
   "suffix": ".res.mjs",
-  "bs-dependencies": [
-    "@rescript/core",
+  "dependencies": [
     "@rescript/react",
-    "@rescriptbr/react-query",
-    "@glennsl/rescript-fetch",
-    "@greenlabs/ppx-spice"
+    "@mununki/ppx-spice"
   ],
   "ppx-flags": [
-    ["@greenlabs/ppx-spice/ppx", "-uncurried"]
-  ],
-  "bsc-flags": [
-    "-open RescriptCore"
+    "@mununki/ppx-spice/ppx"
   ],
   "jsx": {
     "version": 4

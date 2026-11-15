@@ -57,3 +57,12 @@ module IoHome = {
   @react.component @module("react-icons/io5")
   external make: (~style: JsxDOM.style =?, ~size: int=?) => React.element = "IoHome"
 }
+
+module FiSettings = {
+  @react.component @module("react-icons/fi")
+  external make: (
+    ~style: JsxDOM.style=?,
+    ~size: int=?,
+    ~color: string=?,
+  ) => React.element = "FiSettings"
+}

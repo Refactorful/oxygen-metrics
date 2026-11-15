@@ -4,11 +4,11 @@
 module ApexChartBase = {
   @react.component @module("react-apexcharts")
   external make: (
-    ~\"type"  : string,
-    ~series   : array<'a>,
-    ~options  : 'b =?,
-    ~width    : string =?,
-    ~height   : string =?,
+    ~\"type": string,
+    ~series: array<'series>,
+    ~options: 'options=?,
+    ~width: string=?,
+    ~height: string=?,
   ) => React.element = "default"
 }
 
@@ -24,7 +24,7 @@ module ApexChart = {
 
 module BarChart = {
   @react.component
-  let make = (~series,  ~options=?, ~width, ~height) => {
+  let make = (~series, ~options=?, ~width, ~height) => {
     <ApexChart _type="bar" series options width height />
   }
 }
@@ -36,3 +36,11 @@ module DonutChart = {
   }
 }
 
+/**
+ * Access to the static `ApexCharts.exec(chartId, method, ...args)` helper, used to
+ * imperatively reset the brush selection of a synced chart pair
+ */
+type apexCharts
+
+@module("apexcharts") external apexCharts: apexCharts = "default"
+@send external exec: (apexCharts, string, string, 'options, bool, bool) => unit = "exec"
